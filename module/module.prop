@@ -4,3 +4,4 @@ version=
 versionCode=
 author=pittvandewitt, MrWhite214, Zackptg5, Martmists, Iscle, llsl
 description=ViPER4Android Reverse Engineered is an audio enhancing software to provide everyone with a better audio experience
+updateJson=https://raw.githubusercontent.com/likelikeslike/ViPERFX_RE/dev/magisk/update.json
