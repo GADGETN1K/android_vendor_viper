@@ -27,9 +27,14 @@ Run the following command:
 
 ```bash
 adb shell ps -A | grep "audio.*aidl"
+adb shell su -c 'service list | grep -i IFactory'
 ```
 
-If your see any process related to audio HAL with "aidl" in the name, you need the AIDL module. If not, the non-AIDL module should work.
+If your see any process related to audio HAL with "aidl" and the following output, you need the AIDL module. If not, the non-AIDL module should work.
+
+```shell
+... android.hardware.audio.effect.IFactory/default: [android.hardware.audio.effect.IFactory]
+```
 
 ## Disclaimers
 
@@ -50,7 +55,7 @@ If your see any process related to audio HAL with "aidl" in the name, you need t
 > Both modules mount the driver `.so` and the `audio_effects*.xml` config into `/vendor` (and `/system` where present). This is verified with **MagiskSU**. If you use **KernelSU** or **APatch**, you may need a metamodule that allows mounting files into `/vendor` and `/system`. And the AIDL module is confirmed not compatible with **AudioModificationLibrary**, so disable it if you want to use AIDL module.
 
 > [!IMPORTANT]
-> When opening an issue, capture the relevant logs *while reproducing the problem* and attach them. The commands below are listed in the order you should run them when troubleshooting. Run the section that matches your module — the **non-AIDL** steps use `dumpsys`/`logcat` only (no SHM files), while the **AIDL** steps additionally inspect the shared-memory files.
+> When opening an issue, capture the relevant logs *while reproducing the problem* and attach them. The commands below are listed in the order you should run them when troubleshooting. Run the section that matches your module.
 
 ### Log Tags
 
@@ -58,14 +63,14 @@ Both drivers (and the shared DSP) log under a single tag, **`ViPER4Android`**. T
 
 | Tag                  | Module     | Level   |
 | -------------------- | ---------- | ------- |
-| `ViPER4Android`      | both       | D/I/E   |
+| `ViPER`              | both       | D/I/E   |
 | `AHAL_EffectImpl`    | AIDL only  | D/I/V/E |
 | `AHAL_EffectContext` | AIDL only  | E       |
 | `AHAL_EffectThread`  | AIDL only  | V       |
 
 ### Non-AIDL (Legacy)
 
-The non-AIDL driver is `libv4a_re.so`. It receives parameters over the classic `effect_param_t` command interface and creates **no** shared-memory files.
+The non-AIDL driver is `libv4a_re.so`. It receives parameters over the classic `effect_param_t` command interface.
 
 #### 1. Check if the driver is loaded
 
@@ -145,25 +150,36 @@ If you see `avc: denied` lines naming the audio process and the driver `.so`, th
 
 ### AIDL
 
-The AIDL driver is `libv4a_aidl.so`. It receives the full parameter state through memory-mapped **shared-memory** files under `/data/local/tmp/v4a/`.
+The AIDL driver is `libv4a_aidl.so`. It publishes a binder service, **`viper.control`**, when the audio HAL loads it, the app sends all parameters, DDC/convolver data, and status requests over that service.
 
-#### 1. Check if the AIDL driver is loaded
-
-```bash
-adb logcat -d -s 'ViPER4Android:*' | grep -E 'Welcome|version|created'
-```
-
-Expected (the version line must match the module you flashed):
+#### 1. Check if the AIDL driver is loaded and the service is registered
 
 ```bash
-ViPER4Android: Welcome to ViPER FX
-ViPER4Android: Current version is ...
-ViPER4Android: ViPER (AIDL) context created, sample_rate=...
-ViPER4Android: AudioEffect created successfully for session 0
-ViPER4Android: Global effect created (aidlType=true)
+adb logcat -d -s 'ViPER:*' | grep -E 'Welcome|version|AServiceManager|context created'
 ```
 
-If missing, the audio framework never loaded the `.so`. Verify the config was patched:
+Expected (the version line must match the module you flashed; the `addService -> 0` line must be present):
+
+```bash
+ViPER: Welcome to ViPER FX
+ViPER: Current version is ...
+ViPER: Ctrl: AServiceManager_addService viper.control -> 0
+ViPER: ViPER (AIDL) context created, sample_rate=...
+```
+
+Confirm the service is published:
+
+```bash
+adb shell su -c 'service list | grep -i viper'
+```
+
+Expected:
+
+```bash
+... viper.control: [viper.fx.IViperControl]
+```
+
+If `Welcome to ViPER FX` is missing, the audio framework never loaded the `.so`. Verify the config was patched:
 
 ```bash
 adb shell su -c 'grep v4a /vendor/etc/audio_effects_config.xml'
@@ -213,52 +229,34 @@ Expected:
         - implementor: ViPER520 / RE Team
 ```
 
-#### 3. Check the shared-memory files
+#### 3. Check the binder service SELinux declaration
 
-The AIDL driver receives its state through three memory-mapped files under `/data/local/tmp/v4a/`.
+`viper.control` must be declared as a typed service and permitted by policy, otherwise registration or the app's `find` is silently denied.
 
 ```bash
-adb shell su -c 'ls -laZ /data/local/tmp/v4a/'
+adb shell su -c 'grep -i viper /vendor/etc/selinux/vendor_service_contexts'
 ```
 
-Expected (v2 layout — a single merged `shm_params.bin`, no more `shm_hp.bin`/`shm_spk.bin`):
+Expected:
 
 ```bash
-drwxrwxrwx   root        root  ...          kernel          # staged convolver kernels
--rw-rw-rw- 1 root        root  ... 4096 ... shm_bulk.bin    # DDC + convolver bulk push
--rw-rw-rw- 1 audioserver audio ... 4096 ... shm_params.bin  # double-buffered effect params
--rw-rw-rw- 1 root        root  ...  256 ... shm_status.bin  # driver status + version
+viper.control    u:object_r:viper_control_service:s0
 ```
 
-Inspect the SHM headers (magic `V4MS` = `5634 4d53`, format version `0500`):
+Check for denials while toggling the master switch or dragging a slider in the app:
 
 ```bash
-adb shell su -c 'xxd -l 8 /data/local/tmp/v4a/shm_status.bin'
-adb shell su -c 'xxd -l 8 /data/local/tmp/v4a/shm_params.bin'
-adb shell su -c 'xxd -l 8 /data/local/tmp/v4a/shm_bulk.bin'
-```
-
-Expected (all three start with the same magic + version `0500`):
-
-```bash
-00000000: 5634 4d53 0500 0000                      V4MS....
-00000000: 5634 4d53 0500 0000                      V4MS....
-00000000: 5634 4d53 0500 0000                      V4MS....
-```
-
-If the magic is wrong, the files are truncated, or the version does not match the flashed module, the module install did not complete — reflash and reboot.
-
-#### 4. Check SELinux denials
-
-```bash
-adb logcat -d -s audit | grep v4a
+adb logcat -d -s audit | grep -iE 'viper.control|service_manager'
 # or, broader:
-adb logcat -d | grep -E 'avc.*denied.*(v4a|shm|soundfx|shell_data_file)'
+adb shell su -c 'dmesg | grep -iE "avc.*viper.control"'
 ```
 
-If you see `avc: denied` lines naming the audio HAL process and the driver `.so` or the SHM files, the live policy injection from `post-fs-data.sh` did not stick. This is the single most common cause of "module installs cleanly but audio is unprocessed."
+Expected: **no output.** Common denials and what they mean:
 
-#### 5. Filter logcat by the audio HAL process
+- `denied { add } ... name=viper.control ... tclass=service_manager`: the HAL could not register the service
+- `denied { find } ... name=viper.control scontext=u:r:untrusted_app ...`: the app could not look up the service
+
+#### 4. Filter logcat by the audio HAL process
 
 ```bash
 # Find the audio HAL process name (device-specific)
@@ -275,7 +273,7 @@ audioserver   ...  S audioserver
 Then filter logcat by the HAL PID:
 
 ```bash
-adb logcat --pid=$(adb shell pidof android.hardware.audio.service-aidl.aoc | tr -d '\r') -s 'ViPER4Android:*' 'AHAL_EffectImpl:*'
+adb logcat --pid=$(adb shell pidof android.hardware.audio.service-aidl.aoc | tr -d '\r') -s 'ViPER:*' 'AHAL_EffectImpl:*'
 ```
 
 **The HAL process name is device-specific.**
