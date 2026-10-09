@@ -1,3 +1,19 @@
+## 2.1.1
+
+### Improved
+
+- Quadric tube simulator
+- Handle file mounting for KSU (metamodule is not required since this version)
+
+### Fixed
+
+- Send correct dynamic system strength value to DSP
+- **AIDL**: Pin AIDL lib against vendor factory `dlclose` (#32)
+
+### App Requirements:
+
+2.1.1+
+
 ## 2.1.0
 
 ### Added
