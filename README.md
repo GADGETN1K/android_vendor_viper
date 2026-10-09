@@ -49,24 +49,30 @@ If your see any process related to audio HAL with "aidl" and the following outpu
 3. Install the app.
 4. Reboot. Open the app and verify effects are applied (use any of the diagnostic commands below to confirm).
 
+### Self-mounting behavior
+
+Under KernelSU and APatch, both modules ship `skip_mount` and `skip_mountify`, so the manager or metamodule does not mount their `system` trees. Each module instead bind-mounts its driver libraries and patched audio-effect configuration from its own module directory during `service.sh`. Under Magisk, the markers are removed and Magisk mounts the module tree normally.
+
+This behavior is compatible with Magisk, KernelSU, APatch, Hybrid Mount, Magic Mount RS, Magic Mount, meta-overlayfs, and Mountify.
+
 ## Troubleshooting
 
 > [!NOTE]
-> Both modules mount the driver `.so` and the `audio_effects*.xml` config into `/vendor` (and `/system` where present). This is verified with **MagiskSU**. If you use **KernelSU** or **APatch**, you may need a metamodule that allows mounting files into `/vendor` and `/system`. And the AIDL module is confirmed not compatible with **AudioModificationLibrary**, so disable it if you want to use AIDL module.
+> Both modules mount the driver `.so` and the `audio_effects*.xml` config into `/vendor` (and `/system` where present). This is verified with **MagiskSU** and **KernelSU Next**. The AIDL module is confirmed not compatible with **AudioModificationLibrary**, so disable it if you want to use AIDL module.
 
 > [!IMPORTANT]
-> When opening an issue, capture the relevant logs *while reproducing the problem* and attach them. The commands below are listed in the order you should run them when troubleshooting. Run the section that matches your module.
+> When opening an issue, capture the relevant logs _while reproducing the problem_ and attach them. The commands below are listed in the order you should run them when troubleshooting. Run the section that matches your module.
 
 ### Log Tags
 
 Both drivers (and the shared DSP) log under a single tag, **`ViPER4Android`**. The `AHAL_*` tags come from the AOSP AIDL effect framework and appear only on the AIDL path.
 
-| Tag                  | Module     | Level   |
-| -------------------- | ---------- | ------- |
-| `ViPER`              | both       | D/I/E   |
-| `AHAL_EffectImpl`    | AIDL only  | D/I/V/E |
-| `AHAL_EffectContext` | AIDL only  | E       |
-| `AHAL_EffectThread`  | AIDL only  | V       |
+| Tag                  | Module    | Level   |
+| -------------------- | --------- | ------- |
+| `ViPER`              | both      | D/I/E   |
+| `AHAL_EffectImpl`    | AIDL only | D/I/V/E |
+| `AHAL_EffectContext` | AIDL only | E       |
+| `AHAL_EffectThread`  | AIDL only | V       |
 
 ### Non-AIDL (Legacy)
 

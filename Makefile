@@ -65,8 +65,10 @@ module: libs
 	@cp -r $(MODULE_DIR)/META-INF $(MODULE_OUT)/
 	@cp $(MODULE_DIR)/module.prop $(MODULE_OUT)/
 	@cp $(MODULE_DIR)/customize.sh $(MODULE_OUT)/
-	@cp $(MODULE_DIR)/post-fs-data.sh $(MODULE_OUT)/
+	@cp $(MODULE_DIR)/service.sh $(MODULE_OUT)/
 	@cp $(MODULE_DIR)/uninstall.sh $(MODULE_OUT)/
+	@touch $(MODULE_OUT)/skip_mount
+	@touch $(MODULE_OUT)/skip_mountify
 	@cp $(MODULE_DIR)/LICENSE $(MODULE_OUT)/
 	@cp -r $(MODULE_DIR)/common/* $(MODULE_OUT)/common/
 	@sed -i.bak \

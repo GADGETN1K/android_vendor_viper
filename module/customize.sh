@@ -56,3 +56,9 @@ set_permissions() {
 SKIPUNZIP=1
 unzip -qjo "$ZIPFILE" 'common/functions.sh' -d $TMPDIR >&2
 . $TMPDIR/functions.sh
+if [ -n "$KSU" ] || [ -n "$APATCH" ]; then
+  touch $MODPATH/skip_mount
+  touch $MODPATH/skip_mountify
+else
+  rm -f $MODPATH/skip_mount $MODPATH/skip_mountify
+fi

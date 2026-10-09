@@ -73,15 +73,6 @@ body:
       required: true
 
   - type: textarea
-    id: metamodule
-    attributes:
-      label: Metamodule installation (if not using Magisk)
-      description: |
-        If you are not using Magisk, have you installed any metamodules to allow file mounting?
-    validations:
-      required: false
-
-  - type: textarea
     id: additional
     attributes:
       label: Additional context
