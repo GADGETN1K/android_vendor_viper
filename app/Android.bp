@@ -12,6 +12,9 @@ android_app_import {
     name: "ViPER4Android",
     apk: "ViPER4Android.apk",
     presigned: true,
+    // Signed with APK signature v2+ and already zipaligned, with classes.dex
+    // and the JNI libs stored uncompressed: install it untouched.
+    preprocessed: true,
     privileged: true,
     system_ext_specific: true,
     dex_preopt: {
