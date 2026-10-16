@@ -1,3 +1,33 @@
+# vendor/viper
+
+This branch packages [ViPERFX_RE](https://github.com/likelikeslike/ViPERFX_RE) v2.1.1 and the
+[ViPER4Android](https://github.com/likelikeslike/ViPER4Android) app for building into an
+AOSP-based ROM, the way `hardware/dolby` packages Dolby Atmos:
+
+- `Android.bp` builds `libv4a_re` (the legacy, non-AIDL effect) from source into
+  `/vendor/lib{,64}/soundfx`.
+- `ViPERDSP/` is the DSP submodule, vendored as plain files because `repo` does not check
+  out submodules.
+- `app/` imports the release APK (`app/ViPER4Android.apk`) as a privileged `system_ext` app
+  with `MODIFY_AUDIO_ROUTING`, replacing AudioFX.
+
+Usage, with this repo synced to `vendor/viper`:
+
+```make
+$(call inherit-product, vendor/viper/viper.mk)
+```
+
+and register the effect in the device's `audio_effects.xml`:
+
+```xml
+<library name="v4a_re" path="libv4a_re.so"/>
+<effect name="v4a_standard_re" library="v4a_re" uuid="90380da3-8536-4744-a6a3-5731970e640f"/>
+```
+
+The original ViPERFX_RE README follows.
+
+---
+
 # ViPERFX_RE
 
 A reverse-engineered, modernized port of ViPER4Android. The DSP has been re-implemented from a decompilation of the original `libv4a_fx.so`, with audio processed in float32, dead code removed, and dependencies refreshed.

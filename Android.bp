@@ -1,0 +1,50 @@
+//
+// Soong build of libv4a_re (ViPERFX_RE + ViPERDSP), mirroring CMakeLists.txt.
+// The audio HAL loads it from /vendor/lib{,64}/soundfx; the device lists it
+// in its audio_effects.xml:
+//   <library name="v4a_re" path="libv4a_re.so"/>
+//   <effect name="v4a_standard_re" library="v4a_re"
+//           uuid="90380da3-8536-4744-a6a3-5731970e640f"/>
+//
+soong_namespace {
+}
+
+cc_library_shared {
+    name: "libv4a_re",
+    vendor: true,
+    relative_install_path: "soundfx",
+    compile_multilib: "both",
+
+    srcs: [
+        "src/ViPER4Android.cpp",
+        "src/ViperContext.cpp",
+        "ViPERDSP/viper/ViPER.cpp",
+        "ViPERDSP/viper/effects/*.cpp",
+        "ViPERDSP/viper/utils/*.cpp",
+        "ViPERDSP/viper/utils/pffft.c",
+    ],
+    local_include_dirs: [
+        "src",
+        "src/include",
+        "ViPERDSP/include",
+        "ViPERDSP",
+    ],
+    shared_libs: ["liblog"],
+
+    cflags: [
+        "-O3",
+        "-DNDEBUG",
+        "-DVERSION_CODE=20261009",
+        "-DVERSION_NAME=\"v2.1.1\"",
+        "-ffunction-sections",
+        "-fdata-sections",
+        "-fvisibility=hidden",
+        "-Wall",
+        "-Wno-unused-parameter",
+        "-Wno-unused-variable",
+        "-Wno-unused-function",
+    ],
+    cppflags: ["-fvisibility-inlines-hidden"],
+    cpp_std: "gnu++17",
+    ldflags: ["-Wl,--gc-sections"],
+}

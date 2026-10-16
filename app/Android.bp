@@ -1,0 +1,29 @@
+//
+// ViPER4Android app (https://github.com/likelikeslike/ViPER4Android, GPLv3).
+// It is a Gradle project, so its release APK is imported as is: app/
+// holds ViPER4Android.apk from the release matching this tree (v2.1.1).
+//
+// As a privileged app with MODIFY_AUDIO_ROUTING it gets the real audio
+// session ids from getActivePlaybackConfigurations(), so per-app mode works
+// without root.
+//
+
+android_app_import {
+    name: "ViPER4Android",
+    apk: "ViPER4Android.apk",
+    presigned: true,
+    privileged: true,
+    system_ext_specific: true,
+    dex_preopt: {
+        enabled: false,
+    },
+    overrides: ["AudioFX"],
+    required: ["privapp-permissions-viper4android.xml"],
+}
+
+prebuilt_etc {
+    name: "privapp-permissions-viper4android.xml",
+    src: "privapp-permissions-viper4android.xml",
+    sub_dir: "permissions",
+    system_ext_specific: true,
+}
